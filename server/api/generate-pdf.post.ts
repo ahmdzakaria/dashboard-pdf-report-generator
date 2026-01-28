@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
     nominal: Number(body.nominal || 0),
   };
 
-  // Validasi server (biar aman)
+  // Server validation
   if (!payload.title || payload.title.length < 5) {
     throw createError({
       statusCode: 400,
@@ -65,6 +65,7 @@ export default defineEventHandler(async (event) => {
   const doc = new PDFDocument({ size, margin: 50 });
   doc.fontSize(18).text(payload.title);
   doc.moveDown(0.5);
+
   doc
     .fontSize(10)
     .fillColor("#666")
@@ -72,6 +73,7 @@ export default defineEventHandler(async (event) => {
       `Page Size: ${payload.pageSize} • Nominal: ${formatRupiah(payload.nominal)}`,
     )
     .text(`Generated: ${new Date().toLocaleString("id-ID")}`);
+
   doc.moveDown(1);
   doc
     .fillColor("#000")

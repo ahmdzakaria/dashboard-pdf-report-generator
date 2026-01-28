@@ -87,10 +87,7 @@ function onNominalInput(e: Event) {
 }
 
 function onSubmit() {
-  // prevent double submit when loading
   if (props.loading) return;
-
-  // ✅ Task 3: validasi dulu
   if (!validate()) return;
 
   emit("submit", {
@@ -103,10 +100,8 @@ function onSubmit() {
 </script>
 
 <template>
-  <!-- ✅ penting: form + submit.prevent -->
   <form class="space-y-5" @submit.prevent="onSubmit">
     <div class="grid gap-4 md:grid-cols-2">
-      <!-- Page Size -->
       <div>
         <label class="block text-sm font-medium text-gray-800"
           >Ukuran Halaman</label
@@ -127,7 +122,6 @@ function onSubmit() {
         </p>
       </div>
 
-      <!-- Title -->
       <div>
         <label class="block text-sm font-medium text-gray-800"
           >Judul Laporan</label
@@ -152,7 +146,6 @@ function onSubmit() {
       </div>
     </div>
 
-    <!-- Description -->
     <div>
       <label class="block text-sm font-medium text-gray-800"
         >Deskripsi / Isi Laporan</label
@@ -171,7 +164,6 @@ function onSubmit() {
       </p>
     </div>
 
-    <!-- Nominal -->
     <div>
       <label class="block text-sm font-medium text-gray-800"
         >Nominal (Rp)</label
@@ -191,7 +183,6 @@ function onSubmit() {
       </p>
     </div>
 
-    <!-- Button -->
     <div class="flex justify-end pt-2">
       <button
         type="submit"
