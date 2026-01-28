@@ -1,32 +1,28 @@
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { ref, reactive, computed } from "vue";
 import {
   formatRupiahFromDigits,
   rupiahTextToNumber,
 } from "~/composables/useCurrency";
 
-type PageSize = "A4" | "A5" | "Letter";
+type SubmitPayload = {
+  pageSize: string;
+  title: string;
+  description: string;
+  nominal: number;
+};
 
-const emit = defineEmits<{
-  (
-    e: "submit",
-    payload: {
-      pageSize: PageSize;
-      title: string;
-      description: string;
-      nominal: number;
-    },
-  ): void;
-}>();
+const props = defineProps<{ loading?: boolean }>();
+const emit = defineEmits<{ (e: "submit", payload: SubmitPayload): void }>();
 
-// default value A4
-const pageSize = ref<PageSize>("A4");
+const pageSizeOptions = ["A4", "A5", "Letter"];
 
+const pageSize = ref("A4");
 const title = ref("");
 const description = ref("");
 const nominalText = ref("");
 
-const loading = ref(false);
+const titleCount = computed(() => title.value.length);
 
 const errors = reactive({
   pageSize: "",
@@ -46,13 +42,11 @@ function validate() {
   clearErrors();
   let ok = true;
 
-  // 2.1 required
   if (!pageSize.value) {
     errors.pageSize = "Ukuran halaman wajib dipilih";
     ok = false;
   }
 
-  // 2.2 required, min 5, max 100
   const t = title.value.trim();
   if (!t) {
     errors.title = "Judul wajib diisi";
@@ -65,7 +59,6 @@ function validate() {
     ok = false;
   }
 
-  // 2.3 required, min 10
   const d = description.value.trim();
   if (!d) {
     errors.description = "Deskripsi wajib diisi";
@@ -75,157 +68,142 @@ function validate() {
     ok = false;
   }
 
-  // 2.4 required, only number, min 0
+  const nominalNum = rupiahTextToNumber(nominalText.value);
   if (nominalText.value.trim() === "") {
     errors.nominal = "Nominal wajib diisi";
     ok = false;
-  } else {
-    const n = rupiahTextToNumber(nominalText.value);
-    if (Number.isNaN(n) || n < 0) {
-      errors.nominal = "Nominal tidak valid";
-      ok = false;
-    }
+  } else if (!Number.isFinite(nominalNum) || nominalNum < 0) {
+    errors.nominal = "Nominal tidak valid (minimal Rp 0)";
+    ok = false;
   }
 
   return ok;
 }
 
 function onNominalInput(e: Event) {
-  const v = (e.target as HTMLInputElement).value;
-  // only digits
-  const digits = v.replace(/\D/g, "");
-  // show formatted with thousand separators (.)
-  nominalText.value = formatRupiahFromDigits(digits);
+  const el = e.target as HTMLInputElement;
+  nominalText.value = formatRupiahFromDigits(el.value);
+  if (errors.nominal) errors.nominal = "";
 }
 
-async function onSubmit() {
+function onSubmit() {
+  // prevent double submit when loading
+  if (props.loading) return;
+
+  // ✅ Task 3: validasi dulu
   if (!validate()) return;
 
-  loading.value = true;
-  try {
-    // submit as number (no format)
-    const payload = {
-      pageSize: pageSize.value,
-      title: title.value.trim(),
-      description: description.value.trim(),
-      nominal: rupiahTextToNumber(nominalText.value),
-    };
-    emit("submit", payload);
-  } finally {
-    setTimeout(() => (loading.value = false), 250);
-  }
+  emit("submit", {
+    pageSize: pageSize.value,
+    title: title.value.trim(),
+    description: description.value.trim(),
+    nominal: rupiahTextToNumber(nominalText.value),
+  });
 }
 </script>
 
 <template>
-  <form class="space-y-4" @submit.prevent="onSubmit">
-    <!-- Page Size + Title (side by side) -->
-    <div class="grid gap-4 sm:grid-cols-2">
-      <!-- 2.1 Dropdown -->
-      <div class="space-y-1">
-        <label class="text-sm font-medium">Ukuran Halaman</label>
+  <!-- ✅ penting: form + submit.prevent -->
+  <form class="space-y-5" @submit.prevent="onSubmit">
+    <div class="grid gap-4 md:grid-cols-2">
+      <!-- Page Size -->
+      <div>
+        <label class="block text-sm font-medium text-gray-800"
+          >Ukuran Halaman</label
+        >
         <select
           v-model="pageSize"
-          class="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none focus:ring-2"
-          :class="
-            errors.pageSize
-              ? 'border-red-500 focus:ring-red-200'
-              : 'border-gray-200 focus:ring-gray-200'
-          "
+          class="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+          :class="errors.pageSize ? 'border-red-400' : 'border-gray-200'"
+          :disabled="props.loading"
+          @change="errors.pageSize = ''"
         >
-          <option value="A4">A4</option>
-          <option value="A5">A5</option>
-          <option value="Letter">Letter</option>
+          <option v-for="opt in pageSizeOptions" :key="opt" :value="opt">
+            {{ opt }}
+          </option>
         </select>
-        <p v-if="errors.pageSize" class="text-xs text-red-600">
+        <p v-if="errors.pageSize" class="mt-1 text-xs text-red-600">
           {{ errors.pageSize }}
         </p>
       </div>
 
-      <!-- 2.2 Text Input -->
-      <div class="space-y-1">
-        <label class="text-sm font-medium">Judul Laporan</label>
+      <!-- Title -->
+      <div>
+        <label class="block text-sm font-medium text-gray-800"
+          >Judul Laporan</label
+        >
         <input
           v-model="title"
           type="text"
           maxlength="100"
           placeholder="Masukkan judul laporan..."
-          class="w-full rounded-xl border bg-white px-3 py-2.5 text-sm outline-none focus:ring-2"
-          :class="
-            errors.title
-              ? 'border-red-500 focus:ring-red-200'
-              : 'border-gray-200 focus:ring-gray-200'
-          "
+          class="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+          :class="errors.title ? 'border-red-400' : 'border-gray-200'"
+          :disabled="props.loading"
+          @input="errors.title = ''"
         />
-        <div class="flex justify-between text-xs text-gray-500">
-          <span v-if="errors.title" class="text-red-600">{{
-            errors.title
-          }}</span>
-          <span v-else>Minimal 5 karakter</span>
-          <span>{{ title.length }}/100</span>
+        <div class="mt-1 flex items-center justify-between">
+          <p class="text-xs text-gray-500">Minimal 5 karakter</p>
+          <p class="text-xs text-gray-500">{{ titleCount }}/100</p>
         </div>
+        <p v-if="errors.title" class="mt-1 text-xs text-red-600">
+          {{ errors.title }}
+        </p>
       </div>
     </div>
 
-    <!-- 2.3 Textarea -->
-    <div class="space-y-1">
-      <label class="text-sm font-medium">Deskripsi / Isi Laporan</label>
+    <!-- Description -->
+    <div>
+      <label class="block text-sm font-medium text-gray-800"
+        >Deskripsi / Isi Laporan</label
+      >
       <textarea
         v-model="description"
         rows="4"
         placeholder="Masukkan isi laporan..."
-        class="w-full resize-y rounded-xl border bg-white px-3 py-2.5 text-sm outline-none focus:ring-2"
-        :class="
-          errors.description
-            ? 'border-red-500 focus:ring-red-200'
-            : 'border-gray-200 focus:ring-gray-200'
-        "
+        class="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+        :class="errors.description ? 'border-red-400' : 'border-gray-200'"
+        :disabled="props.loading"
+        @input="errors.description = ''"
       />
-      <p v-if="errors.description" class="text-xs text-red-600">
+      <p v-if="errors.description" class="mt-1 text-xs text-red-600">
         {{ errors.description }}
       </p>
-      <p v-else class="text-xs text-gray-500">Minimal 10 karakter</p>
     </div>
 
-    <!-- 2.4 Currency -->
-    <div class="space-y-1">
-      <label class="text-sm font-medium">Nominal (Rp)</label>
-      <div
-        class="flex items-center gap-2 rounded-xl border bg-white px-3 py-2.5 focus-within:ring-2"
-        :class="
-          errors.nominal
-            ? 'border-red-500 focus-within:ring-red-200'
-            : 'border-gray-200 focus-within:ring-gray-200'
-        "
+    <!-- Nominal -->
+    <div>
+      <label class="block text-sm font-medium text-gray-800"
+        >Nominal (Rp)</label
       >
-        <span class="text-sm text-gray-500">Rp</span>
-        <input
-          :value="nominalText"
-          @input="onNominalInput"
-          inputmode="numeric"
-          autocomplete="off"
-          placeholder="0"
-          class="w-full text-sm outline-none"
-        />
-      </div>
-      <p v-if="errors.nominal" class="text-xs text-red-600">
+      <input
+        :value="nominalText"
+        inputmode="numeric"
+        autocomplete="off"
+        placeholder="Rp 0"
+        class="mt-2 w-full rounded-xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+        :class="errors.nominal ? 'border-red-400' : 'border-gray-200'"
+        :disabled="props.loading"
+        @input="onNominalInput"
+      />
+      <p v-if="errors.nominal" class="mt-1 text-xs text-red-600">
         {{ errors.nominal }}
       </p>
-      <p v-else class="text-xs text-gray-500">Contoh: Rp 1.000.000</p>
     </div>
 
-    <!-- Submit -->
+    <!-- Button -->
     <div class="flex justify-end pt-2">
       <button
         type="submit"
-        class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
-        :disabled="loading"
+        class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+        :disabled="props.loading"
       >
         <span
-          v-if="loading"
-          class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+          v-if="props.loading"
+          class="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
         />
-        Generate PDF
+        <span v-else class="text-base">📄</span>
+        <span>{{ props.loading ? "Generating..." : "Generate PDF" }}</span>
       </button>
     </div>
   </form>
