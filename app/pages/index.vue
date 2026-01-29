@@ -182,9 +182,6 @@ async function handleSubmit(payload: SubmitPayload) {
             <h2 class="text-lg font-semibold text-slate-900">
               History Generate
             </h2>
-            <p class="mt-1 text-sm text-slate-500">
-              Urut terbaru di atas. Responsif & persist saat refresh.
-            </p>
           </div>
 
           <div class="flex items-center gap-2">

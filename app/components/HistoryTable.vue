@@ -34,13 +34,6 @@ function badgeClass(size: string) {
     <p class="mt-1 text-sm text-slate-500">
       Data akan muncul setelah kamu berhasil generate PDF.
     </p>
-
-    <div
-      class="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-xs text-slate-600 ring-1 ring-slate-200"
-    >
-      <span class="inline-block h-2 w-2 rounded-full bg-slate-400" />
-      Tips: coba buat laporan pertama dengan judul jelas + deskripsi paragraf.
-    </div>
   </div>
 
   <!-- Table -->
